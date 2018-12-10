@@ -1,0 +1,63 @@
+#!/bin/bash
+#Searches example.tar.gz for input! 
+#example.tar.gz MUST be in same directory!
+
+tar -xzf example.tar.gz
+mkdir repositories
+
+cd ./example
+for file in $(find . -type f -name '*.txt');
+do
+	while IFS='' read -r line || [[ -n "$line" ]]; do
+		if [[ "$line" == "https"* ]]
+		then
+			cd .. 
+			cd repositories
+			echo "Read line: $line"
+			git clone "$line" 2>/dev/null
+
+			if [ $? == 0 ]
+			then		
+				echo "$line Cloning OK"
+				
+			else
+				>&2 echo "$line Failed"
+			fi
+			cd .. 
+			cd example				
+			break
+		fi
+	done < $file
+done
+
+cd ..
+cd repositories
+
+for repository in $(ls);
+do
+	echo "$repository:"
+	cd $repository
+	directoryNumber=$(find . -not -path '*/\.*' -type d | wc -l)
+	txtNumber=$(find . -not -path '*/\.*' -type f -name '*.txt' | wc -l)
+	otherNumber=$(find . -not -path '*/\.*' -type f ! -name '*.txt' | wc -l)
+	echo "Number of directories: $directoryNumber"
+	echo "Number of txt files: $txtNumber"
+	echo "Number of other files: $otherNumber"
+	for file in $(find . -not -path '*/\.*');
+	do
+		cd ..
+		echo "$file" >> temp.txt
+		cd $repository
+		
+	done
+	cd ..
+	a=`md5sum temp.txt | awk '{print $1}'`
+	rm temp.txt
+	if [[ "$a" == "924639232e4122c30048d6f5b269a5b8" ]]
+	then
+		echo "Structure is ok"
+		
+	else
+		echo "Structure is NOT ok"	
+	fi
+done

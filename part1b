@@ -1,0 +1,74 @@
+#!/bin/bash
+input_urls_array=()
+urls_array=()
+#Searches in input.txt for URLs. Input.txt MUST be in same directory.
+
+
+checkIfExists(){
+	ifExists=-1
+	txtLineNumber=0
+	for j in "${!urls_array[@]}"	
+	do
+		txtLineNumber=$((txtLineNumber+1))
+		if [ "$1" == "${urls_array[$j]}" ]
+		then
+			ifExists=${j}
+			
+			break
+		fi
+	done
+}
+
+functionA(){
+	wget "$1" -q -O  "temp.txt"
+	if [ $? == 0 ]
+	then
+		a=`md5sum temp.txt | awk '{print $1}'`
+		checkIfExists $1
+		if [ $ifExists == -1 ]
+		then
+			urls_array+=(${1})
+			hash_array+=(${a})
+			echo "$1 $a" >> urls.txt 
+			echo "$1 INIT"  
+		else
+			if [ $a != ${hash_array[$ifExists]} ]
+			then 
+				hash_array[${ifExists}]="$a"
+				echo "$1"		
+			fi
+			
+		fi
+	else
+		>&2 echo "$1 FAILED"
+	fi
+}
+
+
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+	if [[ "$line" != "#"* ]]
+	then	
+		input_urls_array+=($line) 
+	fi
+done < input.txt
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+	string_array=($line)
+	urls_array+=(${string_array[0]})
+	hash_array+=(${string_array[1]})   
+done < urls.txt
+
+
+for i in "${input_urls_array[@]}"
+do	
+	functionA $i &
+done
+
+ > urls.txt
+for ((j=0;j<${#urls_array[@]};++j));
+do	
+	echo "${urls_array[j]} ${hash_array[j]}" >> urls.txt
+done
+
+
